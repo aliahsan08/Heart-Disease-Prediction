@@ -7,6 +7,13 @@ import sys
 # Add the root directory to the path to access the model file
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Try to import joblib (preferred for scikit-learn models)
+try:
+    import joblib
+    HAS_JOBLIB = True
+except ImportError:
+    HAS_JOBLIB = False
+
 # Global variable to store the loaded model (loaded once on cold start)
 model = None
 
@@ -29,8 +36,55 @@ def load_model():
         if not os.path.exists(model_path):
             raise FileNotFoundError(f'Model file not found. Tried: {model_path}')
         
-        with open(model_path, 'rb') as f:
-            loaded_data = pickle.load(f)
+        # Try loading with joblib first (preferred for scikit-learn models)
+        # If that fails, fall back to pickle
+        loaded_data = None
+        load_error = None
+        
+        if HAS_JOBLIB:
+            try:
+                loaded_data = joblib.load(model_path)
+            except Exception as e:
+                load_error = str(e)
+                # Fall back to pickle
+                try:
+                    with open(model_path, 'rb') as f:
+                        loaded_data = pickle.load(f)
+                except Exception as pickle_error:
+                    raise ValueError(f'Failed to load model with both joblib and pickle. Joblib error: {load_error}, Pickle error: {str(pickle_error)}')
+        else:
+            # Use pickle if joblib is not available
+            try:
+                with open(model_path, 'rb') as f:
+                    loaded_data = pickle.load(f)
+            except Exception as e:
+                # Try to provide helpful error message for version mismatch
+                error_msg = str(e)
+                if '_RemainderColsList' in error_msg or 'Can\'t get attribute' in error_msg:
+                    # This is a scikit-learn version mismatch issue
+                    # Try to work around it by using joblib with compatibility mode
+                    if HAS_JOBLIB:
+                        try:
+                            # joblib handles version mismatches better
+                            loaded_data = joblib.load(model_path)
+                        except Exception as joblib_error:
+                            raise ValueError(
+                                f'Model version mismatch detected. The model was saved with a different version of scikit-learn. '
+                                f'Original error: {error_msg}. '
+                                f'Joblib error: {str(joblib_error)}. '
+                                f'\n\nSolution: Please retrain and save your model using joblib instead of pickle:\n'
+                                f'  import joblib\n'
+                                f'  joblib.dump(model, "binary_heart_disease_model.pkl")\n'
+                                f'Or ensure you use the same scikit-learn version for training and deployment.'
+                            )
+                    else:
+                        raise ValueError(
+                            f'Model version mismatch. The model was saved with a different version of scikit-learn. '
+                            f'Error: {error_msg}. '
+                            f'Please install joblib (pip install joblib) and retrain the model using joblib.save() instead of pickle.'
+                        )
+                else:
+                    raise
         
         # Import numpy to check for numpy arrays
         import numpy as np
