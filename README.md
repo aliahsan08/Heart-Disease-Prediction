@@ -53,7 +53,7 @@ npm run build
 4. The `.pkl` model file will be included in deployment
 5. Deploy!
 
-**Important:** Make sure `heart_disease_binary_model.pkl` is in your repository root (not in `.gitignore`)
+**Important:** Make sure `binary_heart_disease_model.pkl` is in your repository root (not in `.gitignore`)
 
 ## Project Structure
 
@@ -64,10 +64,9 @@ npm run build
 │   ├── components/         # React components
 │   ├── App.jsx             # Main app logic
 │   └── styles.css          # Styling
-├── heart_disease_binary_model.pkl  # ML model
+├── binary_heart_disease_model.pkl  # ML model
 ├── requirements.txt        # Python dependencies
-├── package.json            # Node.js dependencies
-└── vercel.json             # Vercel configuration
+└── package.json            # Node.js dependencies
 ```
 
 ## Usage

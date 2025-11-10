@@ -20,11 +20,11 @@ def load_model():
         root_dir = os.path.dirname(current_dir)
         
         # Try root directory first (Vercel deployment)
-        model_path = os.path.join(root_dir, 'heart_disease_binary_model.pkl')
+        model_path = os.path.join(root_dir, 'binary_heart_disease_model.pkl')
         
         # If not found, try current directory (fallback)
         if not os.path.exists(model_path):
-            model_path = os.path.join(current_dir, 'heart_disease_binary_model.pkl')
+            model_path = os.path.join(current_dir, 'binary_heart_disease_model.pkl')
         
         if not os.path.exists(model_path):
             raise FileNotFoundError(f'Model file not found. Tried: {model_path}')
