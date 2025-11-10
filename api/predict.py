@@ -30,7 +30,64 @@ def load_model():
             raise FileNotFoundError(f'Model file not found. Tried: {model_path}')
         
         with open(model_path, 'rb') as f:
-            model = pickle.load(f)
+            loaded_data = pickle.load(f)
+        
+        # Import numpy to check for numpy arrays
+        import numpy as np
+        
+        # Handle different pickle file structures
+        # Case 1: Direct model object (but not a numpy array)
+        if isinstance(loaded_data, np.ndarray):
+            raise ValueError('Pickle file contains a numpy array, not a model. Please check the model file format.')
+        elif hasattr(loaded_data, 'predict') and not isinstance(loaded_data, np.ndarray):
+            model = loaded_data
+        # Case 2: Dictionary with model inside
+        elif isinstance(loaded_data, dict):
+            # Try common keys
+            if 'model' in loaded_data:
+                candidate = loaded_data['model']
+                if isinstance(candidate, np.ndarray):
+                    raise ValueError('Dictionary contains numpy array at "model" key, not a model object.')
+                model = candidate
+            elif 'classifier' in loaded_data:
+                candidate = loaded_data['classifier']
+                if isinstance(candidate, np.ndarray):
+                    raise ValueError('Dictionary contains numpy array at "classifier" key, not a model object.')
+                model = candidate
+            elif 'clf' in loaded_data:
+                candidate = loaded_data['clf']
+                if isinstance(candidate, np.ndarray):
+                    raise ValueError('Dictionary contains numpy array at "clf" key, not a model object.')
+                model = candidate
+            else:
+                # Try to find any object with predict method
+                for key, value in loaded_data.items():
+                    if isinstance(value, np.ndarray):
+                        continue  # Skip numpy arrays
+                    if hasattr(value, 'predict'):
+                        model = value
+                        break
+                if model is None:
+                    raise ValueError(f'Could not find model in dictionary. Keys: {list(loaded_data.keys())}')
+        # Case 3: Tuple or list with model
+        elif isinstance(loaded_data, (tuple, list)):
+            for item in loaded_data:
+                if isinstance(item, np.ndarray):
+                    continue  # Skip numpy arrays
+                if hasattr(item, 'predict'):
+                    model = item
+                    break
+            if model is None:
+                raise ValueError('Could not find model in tuple/list')
+        else:
+            raise ValueError(f'Unexpected model format: {type(loaded_data)}. Model must have a predict method.')
+        
+        # Final verification: model must have predict method and not be a numpy array
+        if isinstance(model, np.ndarray):
+            raise ValueError('Model is a numpy array, not a scikit-learn model object.')
+        if not hasattr(model, 'predict'):
+            raise ValueError(f'Loaded object does not have predict method. Type: {type(model)}')
+    
     return model
 
 class handler(BaseHTTPRequestHandler):
@@ -99,12 +156,19 @@ class handler(BaseHTTPRequestHandler):
                 'details': str(e)
             }).encode())
         except Exception as e:
+            import traceback
+            error_details = str(e)
+            traceback_str = traceback.format_exc()
+            print(f"Error in prediction: {error_details}")
+            print(f"Traceback: {traceback_str}")
+            
             self.send_response(500)
             self.send_header('Content-type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             self.wfile.write(json.dumps({
-                'error': str(e)
+                'error': error_details,
+                'type': type(e).__name__
             }).encode())
     
     def do_OPTIONS(self):
