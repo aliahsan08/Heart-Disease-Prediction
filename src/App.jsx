@@ -6,7 +6,7 @@ import ResultPage from './components/ResultPage'
 const QUESTIONS = [
   {
     id: 'age',
-    label: 'What is your age?',
+    label: 'What is your current age?',
     description: 'Please enter your age in years. This helps us understand your risk profile.',
     type: 'number',
     min: 1,
