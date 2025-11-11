@@ -107,8 +107,8 @@ function App() {
         parseFloat(allAnswers.chol)
       ]
 
-      // Call local Python serverless function API
-      // Works both in development (with Vercel CLI) and production
+      // Call the API endpoint
+      // Works with both Render.com (Flask) and Vercel (serverless) deployments
       const apiUrl = '/api/predict'
       
       const response = await fetch(apiUrl, {

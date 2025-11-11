@@ -9,7 +9,8 @@ A modern, user-friendly web application for predicting heart disease risk using 
 - Clear explanations for each health metric
 - Local Python ML model (scikit-learn .pkl file)
 - Responsive design for all devices
-- Deployed on Vercel with Python serverless functions
+- Real-time predictions with model kept in memory
+- Deployed on Render.com with Flask backend
 
 ## Setup
 
@@ -25,16 +26,23 @@ npm install
 pip install -r requirements.txt
 ```
 
-3. Start development server:
+3. Build the frontend:
+```bash
+npm run build
+```
+
+4. Start the Flask server (serves both API and frontend):
+```bash
+python app.py
+```
+
+The app will be available at `http://localhost:5000`
+
+**Alternative:** For frontend-only development:
 ```bash
 npm run dev
 ```
-
-4. For testing the API locally, use Vercel CLI:
-```bash
-npm i -g vercel
-vercel dev
-```
+(Note: API calls will need to point to a running Flask server)
 
 ### Production Build
 
@@ -42,30 +50,61 @@ vercel dev
 npm run build
 ```
 
-## Deployment to Vercel
+## Deployment to Render.com
 
-1. Push your code to GitHub
-2. Connect your repository to Vercel
-3. Vercel will automatically detect:
-   - Frontend: React/Vite app
-   - Backend: Python serverless function in `/api`
-   - Dependencies: `package.json` and `requirements.txt`
-4. The `.pkl` model file will be included in deployment
-5. Deploy!
+### Why Render.com?
+- **Real-time predictions**: Model stays loaded in memory (no cold starts)
+- **Low latency**: Instant predictions with persistent server
+- **Simple deployment**: One-click deployment from GitHub
 
-**Important:** Make sure `binary_heart_disease_model.pkl` is in your repository root (not in `.gitignore`)
+### Deployment Steps
+
+1. **Push your code to GitHub**
+   - Make sure `binary_heart_disease_model.pkl` is in your repository root (not in `.gitignore`)
+   - Ensure all files are committed
+
+2. **Create a new Web Service on Render.com**
+   - Go to [Render.com](https://render.com) and sign up/login
+   - Click "New +" → "Web Service"
+   - Connect your GitHub repository
+
+3. **Configure the service:**
+   - **Name**: `heart-disease-predictor` (or your preferred name)
+   - **Environment**: `Python 3`
+   - **Build Command**: `npm run build`
+   - **Start Command**: `gunicorn app:app`
+   - **Python Version**: `3.11.0` (or latest stable)
+
+4. **Deploy!**
+   - Render will automatically:
+     - Install Node.js dependencies and build the React app
+     - Install Python dependencies
+     - Start the Flask server with Gunicorn
+     - Load the model into memory on startup
+
+5. **Your app will be live at**: `https://your-app-name.onrender.com`
+
+### Using render.yaml (Optional)
+If you've included `render.yaml` in your repo, Render will automatically detect and use these settings. You can also deploy via:
+- Render Dashboard → New Web Service → Select your repo → Render will auto-detect the config
+
+**Important:** 
+- Make sure `binary_heart_disease_model.pkl` is in your repository root (not in `.gitignore`)
+- The model loads once on startup and stays in memory for fast, real-time predictions
 
 ## Project Structure
 
 ```
 ├── api/
-│   └── predict.py          # Python serverless function
+│   └── predict.py          # Python serverless function (legacy, for Vercel)
+├── app.py                  # Flask app (serves API + static files)
 ├── src/
 │   ├── components/         # React components
 │   ├── App.jsx             # Main app logic
 │   └── styles.css          # Styling
 ├── binary_heart_disease_model.pkl  # ML model
 ├── requirements.txt        # Python dependencies
+├── render.yaml             # Render.com deployment config
 └── package.json            # Node.js dependencies
 ```
 
@@ -84,10 +123,16 @@ npm run build
 
 ## API Endpoint
 
-The app uses a Python serverless function at `/api/predict` that:
-- Loads the `.pkl` model on first request (cached for subsequent requests)
+The app uses a Flask API endpoint at `/api/predict` that:
+- Loads the `.pkl` model once on startup (kept in memory for real-time predictions)
 - Accepts POST requests with features array: `[age, sex, cp, oldpeak, thalach, chol]`
-- Returns: `{ "prediction": 0 or 1, "has_risk": boolean }`
+- Returns: `{ "prediction": 0 or 1, "has_risk": boolean, "probability": float }`
+
+**Real-time Performance:**
+- Model is loaded once when the server starts
+- Stays in memory for instant predictions
+- No cold start delays
+- Typical response time: < 100ms
 
 ## Important Note
 

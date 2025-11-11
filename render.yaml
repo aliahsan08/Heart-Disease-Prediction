@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: heart-disease-predictor
+    env: python
+    buildCommand: npm run build
+    startCommand: gunicorn app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+    healthCheckPath: /
+
